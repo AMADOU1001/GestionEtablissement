@@ -1,0 +1,95 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_REGISTRY_DEV = 'localhost:5000'
+        DOCKER_REGISTRY_PROD = 'registry.hub.docker.com'
+        KUBE_CONFIG = "C:\Program Files\Docker\Docker\resources\bin\kubectl.exe"
+        TF_VAR_env = 'dev'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/AMADOU1001/GestionEtablissement.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn clean install'
+            }
+        }
+        stage('Unit Tests') {
+            steps {
+                bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn test'
+            }
+            post {
+                always {
+                    junit 'D:\\examen devops\\Gestion-etablissements\\\\target\\surefire-reports\\*.xml'
+                }
+            }
+        }
+        stage('UI Tests') {
+            steps {
+                bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn verify -Dtest=SeleniumTest'
+            }
+            post {
+                always {
+                    junit 'D:\\examen devops\\Gestion-etablissements\\\\target\\failsafe-reports\\*.xml'
+                }
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn sonar:sonar -Dsonar.projectKey=gestion-etablissements'
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("gestion-etablissements:${env.BUILD_ID}")
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    def registry = (env.TF_VAR_env == 'dev' || env.TF_VAR_env == 'staging') ? DOCKER_REGISTRY_DEV : DOCKER_REGISTRY_PROD
+                    def credentialsId = (env.TF_VAR_env == 'dev' || env.TF_VAR_env == 'staging') ? 'docker-local-credentials' : 'docker-hub-credentials'
+                    docker.withRegistry("http://${registry}", credentialsId) {
+                        docker.image("gestion-etablissements:${env.BUILD_ID}").push()
+                    }
+                }
+            }
+        }
+        stage('Provision Infrastructure') {
+            steps {
+                dir('D:\\examen devops\\Gestion-etablissements\\terraform') {
+                    bat 'terraform init'
+                    bat 'terraform apply -auto-approve'
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\k8s\\deployment.yaml'
+                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\k8s\\service.yaml'
+                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\k8s\\ingress.yaml'
+            }
+        }
+        stage('Deploy Monitoring') {
+            steps {
+                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\monitoring\\prometheus.yaml'
+                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\monitoring\\grafana.yaml'
+            }
+        }
+        stage('Notify') {
+            steps {
+                script {
+                    def message = currentBuild.result == 'SUCCESS' ? 'Build réussi !' : 'Build échoué !'
+                    slackSend channel: '#devops', message: message
+                }
+            }
+}
+}
+}
