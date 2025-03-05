@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emploi du Temps</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Emploi du Temps</h1>
+    <button onclick="chargerEmploiDuTemps()">Charger l'Emploi du Temps</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Classe</th>
+                <th>Cours</th>
+                <th>Date Début</th>
+                <th>Date Fin</th>
+            </tr>
+        </thead>
+        <tbody id="table-emploi-du-temps">
+        </tbody>
+    </table>
+
+    <h2>Ajouter un Emploi du Temps</h2>
+    <form onsubmit="ajouterEmploiDuTemps(event)">
+        <input type="text" id="classe" placeholder="Classe" required>
+        <input type="text" id="cours" placeholder="Cours" required>
+        <input type="datetime-local" id="dateDebut" required>
+        <input type="datetime-local" id="dateFin" required>
+        <button type="submit">Ajouter</button>
+    </form>
+
+    <script>
+        // Charger la liste des emplois du temps
+        function chargerEmploiDuTemps() {
+            fetch("http://localhost:8090/api/emplois")
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById("table-emploi-du-temps");
+                    tableBody.innerHTML = ""; // Effacer le contenu avant d'ajouter les nouveaux emplois du temps
+                    data.forEach(emploi => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${emploi.classe}</td>
+                            <td>${emploi.cours}</td>
+                            <td>${emploi.dateDebut}</td>
+                            <td>${emploi.dateFin}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error("Erreur lors du chargement de l'emploi du temps", error));
+        }
+
+        // Ajouter un emploi du temps
+        function ajouterEmploiDuTemps(event) {
+            event.preventDefault();
+
+            const classe = document.getElementById("classe").value;
+            const cours = document.getElementById("cours").value;
+            const dateDebut = document.getElementById("dateDebut").value;
+            const dateFin = document.getElementById("dateFin").value;
+
+            fetch("http://localhost:8090/api/emplois", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ classe, cours, dateDebut, dateFin })
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Emploi du temps ajouté !");
+                        chargerEmploiDuTemps();
+                    } else {
+                        alert("Erreur lors de l'ajout de l'emploi du temps");
+                    }
+                })
+                .catch(error => console.error("Erreur lors de l'ajout", error));
+        }
+    </script>
+</body>
+
+</html>

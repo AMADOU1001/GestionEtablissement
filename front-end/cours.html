@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des Cours</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Liste des Cours</h1>
+    <button onclick="chargerCours()">Charger les Cours</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Titre</th>
+                <th>Description</th>
+                <th>Nombre d'Heures</th>
+            </tr>
+        </thead>
+        <tbody id="table-cours">
+        </tbody>
+    </table>
+
+    <h2>Ajouter un Cours</h2>
+    <form onsubmit="ajouterCours(event)">
+        <input type="text" id="titre" placeholder="Titre" required>
+        <input type="text" id="description" placeholder="Description" required>
+        <input type="number" id="nombreHeures" placeholder="Nombre d'Heures" required>
+        <button type="submit">Ajouter</button>
+    </form>
+
+    <script>
+        // Charger la liste des cours dans un tableau
+        function chargerCours() {
+            fetch("http://localhost:8090/api/cours")
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById("table-cours");
+                    tableBody.innerHTML = ""; // Effacer le contenu avant d'ajouter les nouveaux cours
+                    data.forEach(cours => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${cours.titre}</td>
+                            <td>${cours.description}</td>
+                            <td>${cours.nombreHeures}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error("Erreur lors du chargement des cours", error));
+        }
+
+        // Ajouter un cours
+        function ajouterCours(event) {
+            event.preventDefault();
+
+            const titre = document.getElementById("titre").value;
+            const description = document.getElementById("description").value;
+            const nombreHeures = document.getElementById("nombreHeures").value;
+
+            fetch("http://localhost:8090/api/cours", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ titre, description, nombreHeures })
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Cours ajouté !");
+                        chargerCours();
+                    } else {
+                        alert("Erreur lors de l'ajout du cours");
+                    }
+                })
+                .catch(error => console.error("Erreur lors de l'ajout", error));
+        }
+    </script>
+</body>
+
+</html>

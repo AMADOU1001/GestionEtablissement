@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des Étudiants</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Liste des Étudiants</h1>
+    <button onclick="chargerEtudiants()">Charger les étudiants</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th>Email</th>
+                <th>Matricule</th>
+            </tr>
+        </thead>
+        <tbody id="table-etudiants">
+        </tbody>
+    </table>
+
+    <h2>Ajouter un Étudiant</h2>
+    <form onsubmit="ajouterEtudiant(event)">
+        <input type="text" id="nom" placeholder="Nom" required>
+        <input type="text" id="prenom" placeholder="Prénom" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="text" id="matricule" placeholder="Matricule" required>
+        <button type="submit">Ajouter</button>
+    </form>
+
+    <script>
+        // Charger la liste des étudiants dans un tableau
+        function chargerEtudiants() {
+            fetch("http://localhost:8090/api/etudiants")
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById("table-etudiants");
+                    tableBody.innerHTML = ""; // Effacer le contenu avant d'ajouter les nouveaux étudiants
+                    data.forEach(etudiant => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${etudiant.nom}</td>
+                            <td>${etudiant.prenom}</td>
+                            <td>${etudiant.email}</td>
+                            <td>${etudiant.matricule}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error("Erreur lors du chargement des étudiants", error));
+        }
+
+        // Ajouter un étudiant
+        function ajouterEtudiant(event) {
+            event.preventDefault();
+
+            const nom = document.getElementById("nom").value;
+            const prenom = document.getElementById("prenom").value;
+            const email = document.getElementById("email").value;
+            const matricule = document.getElementById("matricule").value;
+
+            fetch("http://localhost:8090/api/etudiants", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nom, prenom, email, matricule })
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Étudiant ajouté !");
+                        chargerEtudiants(); // Recharger la liste
+                    } else {
+                        alert("Erreur lors de l'ajout de l'étudiant");
+                    }
+                })
+                .catch(error => console.error("Erreur lors de l'ajout", error));
+        }
+    </script>
+</body>
+
+</html>
