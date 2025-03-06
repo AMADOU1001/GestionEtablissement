@@ -28,4 +28,18 @@ public class ProfesseurService {
     public void supprimerProfesseur(Long id) {
         professeurRepository.deleteById(id);
 }
+
+public Professeur modifierProfesseur(Long id, Professeur professeur) {
+    Optional<Professeur> existingProf = professeurRepository.findById(id);
+    if (existingProf.isPresent()) {
+        Professeur updatedProf = existingProf.get();
+        updatedProf.setNom(professeur.getNom());
+        updatedProf.setPrenom(professeur.getPrenom());
+        updatedProf.setSpecialite(professeur.getSpecialite());
+        return professeurRepository.save(updatedProf);
+    } else {
+        throw new RuntimeException("Professeur non trouvé avec l'ID : " + id);
+    }
+}
+
 }

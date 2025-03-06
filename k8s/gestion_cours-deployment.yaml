@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gestion_cours
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gestion_cours
+  template:
+    metadata:
+      labels:
+        app: gestion_cours
+    spec:
+      containers:
+        - name: gestion_cours
+          image: gestion_cours:latest
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-service:5432/cours_db"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "admin"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value:  "password"

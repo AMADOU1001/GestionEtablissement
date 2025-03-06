@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gestion_professeurs
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gestion_professeurs
+  template:
+    metadata:
+      labels:
+        app: gestion_professeurs
+    spec:
+      containers:
+        - name: gestion_professeurs
+          image: gestion_professeurs:latest
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-service:5432/professeurs_db"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "admin"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "password"

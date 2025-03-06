@@ -29,6 +29,11 @@ public class ProfesseurController {
         return professeurService.ajouterProfesseur(professeur);
     }
 
+     @PutMapping("/{id}")
+    public Professeur modifierProfesseur(@PathVariable Long id, @RequestBody Professeur professeur) {
+        return professeurService.modifierProfesseur(id, professeur);
+    }
+
     @DeleteMapping("/{id}")
     public void supprimerProfesseur(@PathVariable Long id) {
         professeurService.supprimerProfesseur(id);

@@ -4,78 +4,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liste des Étudiants</title>
+    <title>Liste des Professeurs</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <h1>Liste des Profs</h1>
-    <button onclick="chargerProfesseurs()">Charger les Profs</button>
+    <div id="navbar-container"></div>
+    <h1>Liste des Professeurs</h1>
 
     <table>
         <thead>
             <tr>
                 <th>Nom</th>
                 <th>Prénom</th>
-                <th>specialite</th>
+                <th>Spécialité</th>
+                <th>Actions</th>
             </tr>
         </thead>
-        <tbody id="table-professeurs">
-        </tbody>
+        <tbody id="table-professeurs"></tbody>
     </table>
 
-    <h2>Ajouter un Prof</h2>
-    <form onsubmit="ajouterProfesseur(event)">
+    <h2 id="form-title">Ajouter un Professeur</h2>
+    <form onsubmit="soumettreProfesseur(event)">
+        <input type="hidden" id="prof-id">
         <input type="text" id="nom" placeholder="Nom" required>
         <input type="text" id="prenom" placeholder="Prénom" required>
-        <input type="specialite" id="specialite" placeholder="specialite" required>
-        <button type="submit">Ajouter</button>
+        <input type="text" id="specialite" placeholder="Spécialité" required>
+        <button type="submit" id="submit-btn">Ajouter</button>
     </form>
 
     <script>
-        // Charger la liste des profs dans un tableeau
+        fetch("navbar.html")
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("navbar-container").innerHTML = data;
+            })
+            .catch(error => console.error("Erreur lors du chargement de la navbar :", error));
+
+        document.addEventListener("DOMContentLoaded", chargerProfesseurs);
+
         function chargerProfesseurs() {
             fetch("http://localhost:8090/api/professeurs")
                 .then(response => response.json())
                 .then(data => {
                     const tableBody = document.getElementById("table-professeurs");
-                    tableBody.innerHTML = ""; // Effacer le contenu avant d'ajouter les nouveaux profs
-                    data.forEach(etudiant => {
+                    tableBody.innerHTML = "";
+                    data.forEach(prof => {
                         const row = document.createElement("tr");
                         row.innerHTML = `
-                            <td>${etudiant.nom}</td>
-                            <td>${etudiant.prenom}</td>
-                            <td>${etudiant.specialite}</td>
+                            <td>${prof.nom}</td>
+                            <td>${prof.prenom}</td>
+                            <td>${prof.specialite}</td>
+                            <td>
+                                <button onclick="remplirFormulaire(${prof.id}, '${prof.nom}', '${prof.prenom}', '${prof.specialite}')">Modifier</button>
+                                <button onclick="supprimerProfesseur(${prof.id})">Supprimer</button>
+                            </td>
                         `;
                         tableBody.appendChild(row);
                     });
                 })
-                .catch(error => console.error("Erreur lors du chargement des profs", error));
+                .catch(error => console.error("Erreur lors du chargement des professeurs", error));
         }
 
-
-        // Ajouter un professeur
-        function ajouterProfesseur(event) {
+        function soumettreProfesseur(event) {
             event.preventDefault();
-
+            const id = document.getElementById("prof-id").value;
             const nom = document.getElementById("nom").value;
             const prenom = document.getElementById("prenom").value;
             const specialite = document.getElementById("specialite").value;
+            const url = id ? `http://localhost:8090/api/professeurs/${id}` : "http://localhost:8090/api/professeurs";
+            const method = id ? "PUT" : "POST";
 
-            fetch("http://localhost:8090/api/professeurs", {
-                method: "POST",
+            fetch(url, {
+                method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ nom, prenom, specialite })
             })
                 .then(response => {
                     if (response.ok) {
-                        alert("Professeur ajouté !");
+                        alert(id ? "Professeur modifié !" : "Professeur ajouté !");
+                        resetForm();
                         chargerProfesseurs();
                     } else {
-                        alert("Erreur lors de l'ajout du professeur");
+                        alert("Erreur lors de l'enregistrement du professeur");
                     }
                 })
-                .catch(error => console.error("Erreur lors de l'ajout", error));
+                .catch(error => console.error("Erreur lors de l'enregistrement", error));
+        }
+
+        function remplirFormulaire(id, nom, prenom, specialite) {
+            document.getElementById("prof-id").value = id;
+            document.getElementById("nom").value = nom;
+            document.getElementById("prenom").value = prenom;
+            document.getElementById("specialite").value = specialite;
+            document.getElementById("form-title").innerText = "Modifier un Professeur";
+            document.getElementById("submit-btn").innerText = "Modifier";
+        }
+
+        function resetForm() {
+            document.getElementById("prof-id").value = "";
+            document.getElementById("nom").value = "";
+            document.getElementById("prenom").value = "";
+            document.getElementById("specialite").value = "";
+            document.getElementById("form-title").innerText = "Ajouter un Professeur";
+            document.getElementById("submit-btn").innerText = "Ajouter";
+        }
+
+        function supprimerProfesseur(id) {
+            if (!confirm("Voulez-vous vraiment supprimer ce professeur ?")) return;
+
+            fetch(`http://localhost:8090/api/professeurs/${id}`, {
+                method: "DELETE"
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Professeur supprimé !");
+                        chargerProfesseurs();
+                    } else {
+                        alert("Erreur lors de la suppression");
+                    }
+                })
+                .catch(error => console.error("Erreur:", error));
         }
     </script>
 </body>

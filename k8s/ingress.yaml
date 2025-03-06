@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: GESTION-ETABLISSEMENTS-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: GESTION-ETABLISSEMENTS.local
+      http:
+        paths:
+          - path: /emplois
+            pathType: Prefix
+            backend:
+              service:
+                name: gestion_emploi_du_temps-service
+                port:
+                  number: 80
+          - path: /professeurs
+            pathType: Prefix
+            backend:
+              service:
+                name: gestion_professeurs-service
+                port:
+                  number: 80
+          - path: /cours
+            pathType: Prefix
+            backend:
+              service:
+                name: gestion_cours-service
+                port:
+              number: 80

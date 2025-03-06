@@ -55,7 +55,8 @@ tr:hover {
 }
 
 /* Style du formulaire */
-form {
+form,
+h2 {
     display: flex;
     flex-direction: column;
     width: 300px;
@@ -66,14 +67,16 @@ form {
     border-radius: 5px;
 }
 
-input {
+input,
+select {
     margin-bottom: 10px;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 5px;
 }
 
-input:focus {
+input:focus,
+select:focus {
     outline: none;
     border-color: #007BFF;
     box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);

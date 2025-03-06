@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gestion-emploi-du-temps
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gestion-emploi-du-temps
+  template:
+    metadata:
+      labels:
+        app: gestion-emploi-du-temps
+    spec:
+      containers:
+        - name: gestion-emploi-du-temps
+          image: gestion-emploi-du-temps:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-service:5432/emploi_db"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "admin"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "password"

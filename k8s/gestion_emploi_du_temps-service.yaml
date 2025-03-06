@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gestion-emploi-du-temps-service
+spec:
+  selector:
+    app: gestion-emploi-du-temps
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8081
+  type: ClusterIP

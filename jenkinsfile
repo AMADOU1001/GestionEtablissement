@@ -1,95 +1,105 @@
+
+
 pipeline {
     agent any
     environment {
         DOCKER_REGISTRY_DEV = 'localhost:5000'
-        DOCKER_REGISTRY_PROD = 'registry.hub.docker.com'
-        KUBE_CONFIG = "C:\Program Files\Docker\Docker\resources\bin\kubectl.exe"
+        DOCKER_REGISTRY_PROD = 'docker.io'
+        KUBE_CONFIG = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\kubectl.exe"
         TF_VAR_env = 'dev'
+        MICRO_SERVICES = "gestion_emploi_du_temps gestion_professeurs gestion_cours"
     }
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/AMADOU1001/GestionEtablissement.git'
             }
         }
-        stage('Build') {
-            steps {
-                bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn clean install'
-            }
-        }
-        stage('Unit Tests') {
-            steps {
-                bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn test'
-            }
-            post {
-                always {
-                    junit 'D:\\examen devops\\Gestion-etablissements\\\\target\\surefire-reports\\*.xml'
-                }
-            }
-        }
-        stage('UI Tests') {
-            steps {
-                bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn verify -Dtest=SeleniumTest'
-            }
-            post {
-                always {
-                    junit 'D:\\examen devops\\Gestion-etablissements\\\\target\\failsafe-reports\\*.xml'
-                }
-            }
-        }
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    bat 'cd /d D:\\examen devops\\Gestion-etablissements && mvn sonar:sonar -Dsonar.projectKey=gestion-etablissements'
-                }
-            }
-        }
-        stage('Build Docker Image') {
+
+        stage('Build & Test') {
             steps {
                 script {
-                    docker.build("gestion-etablissements:${env.BUILD_ID}")
-                }
-            }
-        }
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    def registry = (env.TF_VAR_env == 'dev' || env.TF_VAR_env == 'staging') ? DOCKER_REGISTRY_DEV : DOCKER_REGISTRY_PROD
-                    def credentialsId = (env.TF_VAR_env == 'dev' || env.TF_VAR_env == 'staging') ? 'docker-local-credentials' : 'docker-hub-credentials'
-                    docker.withRegistry("http://${registry}", credentialsId) {
-                        docker.image("gestion-etablissements:${env.BUILD_ID}").push()
+                    MICRO_SERVICES.split().each { service ->
+                        bat "cd /d D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\$service && mvn clean install"
+                        bat "cd /d D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\$service && mvn test"
                     }
                 }
             }
         }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    MICRO_SERVICES.split().each { service ->
+                        withSonarQubeEnv('SonarQube') {
+                            bat "cd /d D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\$service && mvn sonar:sonar -Dsonar.projectKey=$service"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    MICRO_SERVICES.split().each { service ->
+                        bat "docker build -t gestion-$service:latest D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\$service"
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                script {
+                    def registry = (env.TF_VAR_env == 'dev' || env.TF_VAR_env == 'staging') ? DOCKER_REGISTRY_DEV : DOCKER_REGISTRY_PROD
+                    def credentialsId = (env.TF_VAR_env == 'dev' || env.TF_VAR_env == 'staging') ? 'docker-local-credentials' : 'docker-hub-credentials'
+                    
+                    MICRO_SERVICES.split().each { service ->
+                        docker.withRegistry("http://${registry}", credentialsId) {
+                            docker.image("gestion-$service:latest").push()
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Provision Infrastructure') {
             steps {
-                dir('D:\\examen devops\\Gestion-etablissements\\terraform') {
+                dir('D:\\examen devops\\GESTION-ETABLISSEMENTS\\terraform') {
                     bat 'terraform init'
                     bat 'terraform apply -auto-approve'
                 }
             }
         }
+
         stage('Deploy to Kubernetes') {
             steps {
-                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\k8s\\deployment.yaml'
-                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\k8s\\service.yaml'
-                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\k8s\\ingress.yaml'
+                script {
+                    MICRO_SERVICES.split().each { service ->
+                        bat "kubectl apply -f D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\k8s\\${service}-deployment.yaml"
+                        bat "kubectl apply -f D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\k8s\\${service}-service.yaml"
+                    }
+                    bat "kubectl apply -f D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\k8s\\ingress.yaml"
+                }
             }
         }
+
         stage('Deploy Monitoring') {
             steps {
-                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\monitoring\\prometheus.yaml'
-                bat 'kubectl apply -f D:\\examen devops\\Gestion-etablissements\\monitoring\\grafana.yaml'
+                bat 'kubectl apply -f D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\monitoring\\prometheus.yaml'
+                bat 'kubectl apply -f D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\monitoring\\grafana.yaml'
+                bat 'kubectl apply -f D:\\examen devops\\GESTION-ETABLISSEMENTS\\BACK-END\\monitoring\\loki.yaml'
             }
         }
+
         stage('Notify') {
             steps {
                 script {
-                    def message = currentBuild.result == 'SUCCESS' ? 'Build réussi !' : 'Build échoué !'
+                    def message = currentBuild.result == 'SUCCESS' ? '✅ Déploiement réussi !' : '❌ Échec du déploiement !'
                     slackSend channel: '#devops', message: message
                 }
             }
-}
+ }
 }
 }

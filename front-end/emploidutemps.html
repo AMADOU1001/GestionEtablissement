@@ -4,81 +4,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emploi du Temps</title>
+    <title>Gestion Emploi du Temps</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <h1>Emploi du Temps</h1>
-    <button onclick="chargerEmploiDuTemps()">Charger l'Emploi du Temps</button>
+    <div id="navbar-container"></div>
+    <h1>Liste des emplois du temps</h1>
 
     <table>
         <thead>
             <tr>
-                <th>Classe</th>
+                <th>Professeur</th>
                 <th>Cours</th>
-                <th>Date Début</th>
-                <th>Date Fin</th>
+                <th>Date de début</th>
+                <th>Date de fin</th>
+                <th>Actions</th>
             </tr>
         </thead>
-        <tbody id="table-emploi-du-temps">
-        </tbody>
+        <tbody id="table-body"></tbody>
     </table>
 
-    <h2>Ajouter un Emploi du Temps</h2>
-    <form onsubmit="ajouterEmploiDuTemps(event)">
-        <input type="text" id="classe" placeholder="Classe" required>
-        <input type="text" id="cours" placeholder="Cours" required>
-        <input type="datetime-local" id="dateDebut" required>
-        <input type="datetime-local" id="dateFin" required>
-        <button type="submit">Ajouter</button>
+    <h2>Créer / Modifier un emploi du temps</h2>
+
+    <form>
+        <input type="hidden" id="emploiId">
+        <label for="professeur">Sélectionnez un professeur :</label>
+        <select id="professeur">
+            <option value="">-- Choisir un professeur --</option>
+        </select>
+
+        <label for="cours">Sélectionnez un cours :</label>
+        <select id="cours">
+            <option value="">-- Choisir un cours --</option>
+        </select>
+
+        <label for="dateDebut">Date de début :</label>
+        <input type="datetime-local" id="dateDebut">
+
+        <label for="dateFin">Date de fin :</label>
+        <input type="datetime-local" id="dateFin">
+
+        <button type="button" onclick="sauvegarderEmploi()">Sauvegarder</button>
     </form>
 
     <script>
-        // Charger la liste des emplois du temps
-        function chargerEmploiDuTemps() {
+        fetch("navbar.html")
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("navbar-container").innerHTML = data;
+            })
+            .catch(error => console.error("Erreur lors du chargement de la navbar :", error));
+
+        document.addEventListener("DOMContentLoaded", function () {
+            chargerProfesseurs();
+            chargerCours();
+            chargerEmplois();
+        });
+
+        function chargerProfesseurs() {
+            fetch("http://localhost:8090/api/professeurs")
+                .then(response => response.json())
+                .then(data => {
+                    const selectProf = document.getElementById("professeur");
+                    selectProf.innerHTML = '<option value="">-- Choisir un professeur --</option>';
+                    data.forEach(prof => {
+                        let option = document.createElement("option");
+                        option.value = prof.id;
+                        option.textContent = prof.nom + " " + prof.prenom;
+                        selectProf.appendChild(option);
+                    });
+                })
+                .catch(error => console.error("Erreur chargement professeurs :", error));
+        }
+
+        function chargerCours() {
+            fetch("http://localhost:8090/api/cours")
+                .then(response => response.json())
+                .then(data => {
+                    const selectCours = document.getElementById("cours");
+                    selectCours.innerHTML = '<option value="">-- Choisir un cours --</option>';
+                    data.forEach(cours => {
+                        let option = document.createElement("option");
+                        option.value = cours.id;
+                        option.textContent = cours.titre;
+                        selectCours.appendChild(option);
+                    });
+                })
+                .catch(error => console.error("Erreur chargement cours :", error));
+        }
+
+        function sauvegarderEmploi() {
+            const emploiId = document.getElementById("emploiId").value;
+            const professeurId = document.getElementById("professeur").value;
+            const coursId = document.getElementById("cours").value;
+            const dateDebut = document.getElementById("dateDebut").value;
+            const dateFin = document.getElementById("dateFin").value;
+
+            if (!professeurId || !coursId || !dateDebut || !dateFin) {
+                alert("Veuillez remplir tous les champs.");
+                return;
+            }
+
+            const emploi = { professeurId, coursId, dateDebut, dateFin };
+            const url = emploiId ? `http://localhost:8090/api/emplois/${emploiId}` : "http://localhost:8090/api/emplois";
+            const method = emploiId ? "PUT" : "POST";
+
+            fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(emploi)
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error("Erreur lors de l'enregistrement");
+                    return response.json();
+                })
+                .then(() => {
+                    alert("Opération réussie !");
+                    chargerEmplois();
+                    document.querySelector("form").reset();
+                    document.getElementById("emploiId").value = "";
+                })
+                .catch(error => console.error("Erreur :", error));
+        }
+
+        function chargerEmplois() {
             fetch("http://localhost:8090/api/emplois")
                 .then(response => response.json())
                 .then(data => {
-                    const tableBody = document.getElementById("table-emploi-du-temps");
-                    tableBody.innerHTML = ""; // Effacer le contenu avant d'ajouter les nouveaux emplois du temps
+                    const tableBody = document.getElementById("table-body");
+                    tableBody.innerHTML = "";
                     data.forEach(emploi => {
                         const row = document.createElement("tr");
                         row.innerHTML = `
-                            <td>${emploi.classe}</td>
+                            <td>${emploi.professeur}</td>
                             <td>${emploi.cours}</td>
                             <td>${emploi.dateDebut}</td>
                             <td>${emploi.dateFin}</td>
+                            <td>
+                                <button onclick="modifierEmploi(${emploi.id}, '${emploi.professeurId}', '${emploi.coursId}', '${emploi.dateDebut}', '${emploi.dateFin}')">Modifier</button>
+                                <button onclick="supprimerEmploi(${emploi.id})">Supprimer</button>
+                            </td>
                         `;
                         tableBody.appendChild(row);
                     });
                 })
-                .catch(error => console.error("Erreur lors du chargement de l'emploi du temps", error));
+                .catch(error => console.error("Erreur chargement emplois :", error));
         }
 
-        // Ajouter un emploi du temps
-        function ajouterEmploiDuTemps(event) {
-            event.preventDefault();
+        function modifierEmploi(id, professeurId, coursId, dateDebut, dateFin) {
+            document.getElementById("emploiId").value = id;
+            document.getElementById("professeur").value = professeurId;
+            document.getElementById("cours").value = coursId;
+            document.getElementById("dateDebut").value = dateDebut;
+            document.getElementById("dateFin").value = dateFin;
+        }
 
-            const classe = document.getElementById("classe").value;
-            const cours = document.getElementById("cours").value;
-            const dateDebut = document.getElementById("dateDebut").value;
-            const dateFin = document.getElementById("dateFin").value;
+        function supprimerEmploi(id) {
+            if (!confirm("Voulez-vous vraiment supprimer cet emploi du temps ?")) return;
 
-            fetch("http://localhost:8090/api/emplois", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ classe, cours, dateDebut, dateFin })
-            })
+            fetch(`http://localhost:8090/api/emplois/${id}`, { method: "DELETE" })
                 .then(response => {
                     if (response.ok) {
-                        alert("Emploi du temps ajouté !");
-                        chargerEmploiDuTemps();
+                        alert("Emploi du temps supprimé !");
+                        chargerEmplois();
                     } else {
-                        alert("Erreur lors de l'ajout de l'emploi du temps");
+                        alert("Erreur lors de la suppression");
                     }
                 })
-                .catch(error => console.error("Erreur lors de l'ajout", error));
+                .catch(error => console.error("Erreur:", error));
         }
     </script>
 </body>
