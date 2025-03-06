@@ -30,3 +30,10 @@ spec:
                 name: gestion_cours-service
                 port:
               number: 80
+          - path: /etudiants
+            pathType: Prefix
+            backend:
+              service:
+                name: gestion_etudiants-service
+                port:
+              number: 80

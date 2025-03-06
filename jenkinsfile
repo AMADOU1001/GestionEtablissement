@@ -7,7 +7,7 @@ pipeline {
         DOCKER_REGISTRY_PROD = 'docker.io'
         KUBE_CONFIG = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\kubectl.exe"
         TF_VAR_env = 'dev'
-        MICRO_SERVICES = "gestion_emploi_du_temps gestion_professeurs gestion_cours"
+        MICRO_SERVICES = "gestion_emploi_du_temps gestion_professeurs gestion_cours gestion_etudiant "
     }
     stages {
         stage('Checkout Code') {

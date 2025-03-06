@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gestion_professeurs
+  name: gestion_etudiant
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: gestion_professeurs
+      app: gestion_etudiant
   template:
     metadata:
       labels:
-        app: gestion_professeurs
+        app: gestion_etudiant
     spec:
       containers:
-        - name: gestion_professeurs
-          image: gestion_professeurs:latest
+        - name: gestion_etudiant
+          image: gestion_etudiant:latest
           ports:
-            - containerPort: 8082
+            - containerPort: 8081
           env:
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres-service:5432/gestion_profs"
+              value: "jdbc:postgresql://postgres-service:5432/gestion_etudiants"
             - name: SPRING_DATASOURCE_USERNAME
               value: "admin"
             - name: SPRING_DATASOURCE_PASSWORD
-              value: "password"
+              value:  "password"
